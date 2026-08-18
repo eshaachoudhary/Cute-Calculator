@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""
+Cutie Calculator 🌸
+--------------------
+A simple, cute-themed calculator built with Tkinter (Python's built-in
+GUI library — no extra installation needed).
+
+The actual math is handled in calc_logic.py, kept separate so it can be
+tested on its own. This file only handles the window, buttons, and colors.
+
+Usage:
+    python calculator.py
+"""
+
+import tkinter as tk
+
+from calc_logic import calculate, format_result
+
+# --- Cute pastel color palette ---
+BG_COLOR = "#FFE4EC"          # soft pink background
+DISPLAY_BG = "#FFF0F5"        # lighter pink for the screen
+DISPLAY_FG = "#8B5D6B"        # warm mauve text
+NUMBER_BTN_BG = "#FFFFFF"     # white number buttons
+NUMBER_BTN_FG = "#8B5D6B"
+OPERATOR_BTN_BG = "#FFC1D9"   # pink operator buttons
+OPERATOR_BTN_FG = "#7A3B52"
+EQUALS_BTN_BG = "#C9A9E9"     # lavender equals button
+EQUALS_BTN_FG = "#FFFFFF"
+CLEAR_BTN_BG = "#FFB6B9"      # coral clear button
+CLEAR_BTN_FG = "#7A3B52"
+FONT_DISPLAY = ("Comic Sans MS", 28, "bold")
+FONT_BUTTON = ("Comic Sans MS", 16, "bold")
+
+
+class CutieCalculator:
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.root.title("🌸 Cutie Calculator 🌸")
+        self.root.configure(bg=BG_COLOR)
+        self.root.resizable(False, False)
+
+        # State: what's currently on screen, and the pending calculation.
+        self.current_input = ""
+        self.first_number = None
+        self.pending_operator = None
+
+        self._build_display()
+        self._build_buttons()
+
+    def _build_display(self):
+        self.display_var = tk.StringVar(value="0")
+        display = tk.Label(
+            self.root,
+            textvariable=self.display_var,
+            font=FONT_DISPLAY,
+            bg=DISPLAY_BG,
+            fg=DISPLAY_FG,
+            anchor="e",
+            padx=20,
+            pady=30,
+            width=10,
+        )
+        display.grid(row=0, column=0, columnspan=4, sticky="nsew", padx=10, pady=(10, 5))
+
+    def _build_buttons(self):
+        # (label, row, col, colspan, kind) — kind decides the color/behavior
+        buttons = [
+            ("C", 1, 0, 1, "clear"),
+            ("⌫", 1, 1, 1, "backspace"),
+            ("%", 1, 2, 1, "operator"),
+            ("÷", 1, 3, 1, "operator"),
+
+            ("7", 2, 0, 1, "number"),
+            ("8", 2, 1, 1, "number"),
+            ("9", 2, 2, 1, "number"),
+            ("×", 2, 3, 1, "operator"),
+
+            ("4", 3, 0, 1, "number"),
+            ("5", 3, 1, 1, "number"),
+            ("6", 3, 2, 1, "number"),
+            ("−", 3, 3, 1, "operator"),
+
+            ("1", 4, 0, 1, "number"),
+            ("2", 4, 1, 1, "number"),
+            ("3", 4, 2, 1, "number"),
+            ("+", 4, 3, 1, "operator"),
+
+            ("0", 5, 0, 2, "number"),
+            (".", 5, 2, 1, "number"),
+            ("=", 5, 3, 1, "equals"),
+        ]
+
+        style_map = {
+            "number": (NUMBER_BTN_BG, NUMBER_BTN_FG),
+            "operator": (OPERATOR_BTN_BG, OPERATOR_BTN_FG),
+            "equals": (EQUALS_BTN_BG, EQUALS_BTN_FG),
+            "clear": (CLEAR_BTN_BG, CLEAR_BTN_FG),
+            "backspace": (CLEAR_BTN_BG, CLEAR_BTN_FG),
+        }
+
+        for label, row, col, colspan, kind in buttons:
+            bg, fg = style_map[kind]
+            btn = tk.Button(
+                self.root,
+                text=label,
+                font=FONT_BUTTON,
+                bg=bg,
+                fg=fg,
+                activebackground=bg,
+                relief="flat",
+                bd=0,
+                width=5 if colspan == 1 else 11,
+                height=2,
+                command=lambda l=label, k=kind: self._on_button(l, k),
+            )
+            btn.grid(
+                row=row, column=col, columnspan=colspan,
+                padx=6, pady=6, sticky="nsew",
+            )
+
+    # --- Button logic ---
+
+    def _on_button(self, label: str, kind: str):
+        if kind == "number":
+            self._handle_number(label)
+        elif kind == "operator":
+            self._handle_operator(label)
+        elif kind == "equals":
+            self._handle_equals()
+        elif kind == "clear":
+            self._handle_clear()
+        elif kind == "backspace":
+            self._handle_backspace()
+
+    def _handle_number(self, label: str):
+        if label == "." and "." in self.current_input:
+            return  # only one decimal point allowed
+        self.current_input += label
+        self.display_var.set(self.current_input)
+
+    def _handle_operator(self, symbol: str):
+        if self.current_input == "":
+            return  # nothing entered yet
+
+        # Map the cute symbols to the actual operators calc_logic expects.
+        operator_map = {"÷": "/", "×": "*", "−": "-", "+": "+", "%": "%"}
+        self.pending_operator = operator_map[symbol]
+        self.first_number = float(self.current_input)
+        self.current_input = ""
+        self.display_var.set(f"{format_result(self.first_number)} {symbol}")
+
+    def _handle_equals(self):
+        if self.pending_operator is None or self.current_input == "":
+            return
+
+        second_number = float(self.current_input)
+        try:
+            result = calculate(self.first_number, second_number, self.pending_operator)
+            result_str = format_result(result)
+            self.display_var.set(result_str)
+            # Allow chaining: pressing = again with the same result starts fresh
+            self.current_input = result_str
+        except ZeroDivisionError:
+            self.display_var.set("Oops! Can't ÷ by 0 🙈")
+            self.current_input = ""
+        finally:
+            self.pending_operator = None
+            self.first_number = None
+
+    def _handle_clear(self):
+        self.current_input = ""
+        self.first_number = None
+        self.pending_operator = None
+        self.display_var.set("0")
+
+    def _handle_backspace(self):
+        self.current_input = self.current_input[:-1]
+        self.display_var.set(self.current_input if self.current_input else "0")
+
+
+def main():
+    root = tk.Tk()
+    CutieCalculator(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
