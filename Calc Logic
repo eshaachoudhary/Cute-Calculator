@@ -1,0 +1,50 @@
+"""
+Calculator Logic
+------------------
+The actual math lives here, separate from the GUI code.
+
+Why separate them?
+    GUI code (buttons, colors, windows) is hard to unit test automatically.
+    By keeping the calculation logic in its own file with plain functions,
+    we can write simple, reliable tests for it (see test_calc_logic.py)
+    without needing to open any windows.
+"""
+
+
+def calculate(first_number: float, second_number: float, operator: str) -> float:
+    """
+    Perform a single arithmetic operation and return the result.
+
+    Supported operators: '+', '-', '*', '/', '%'
+    Raises ValueError for an unknown operator.
+    Raises ZeroDivisionError for division or modulo by zero.
+    """
+    if operator == "+":
+        return first_number + second_number
+    elif operator == "-":
+        return first_number - second_number
+    elif operator == "*":
+        return first_number * second_number
+    elif operator == "/":
+        if second_number == 0:
+            raise ZeroDivisionError("Cannot divide by zero")
+        return first_number / second_number
+    elif operator == "%":
+        if second_number == 0:
+            raise ZeroDivisionError("Cannot divide by zero")
+        return first_number % second_number
+    else:
+        raise ValueError(f"Unknown operator: {operator}")
+
+
+def format_result(value: float) -> str:
+    """
+    Turn a numeric result into a clean display string.
+
+    Whole numbers show without a decimal point (e.g. "4" instead of "4.0").
+    Very long decimals are rounded to keep the display readable.
+    """
+    if value == int(value):
+        return str(int(value))
+    rounded = round(value, 8)
+    return str(rounded)
